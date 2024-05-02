@@ -1,5 +1,6 @@
 close all; clearvars; clc;
 
+% cd 'C:\Users\IIITB\OneDrive - iiit-b\Desktop\IRS';
 %% Draw RIS Plane
 nH = 16;
 nV = 16;
@@ -101,11 +102,15 @@ txt = strcat("Impinging(AP2RIS): Azimuth(deg) = ",num2str(180*impinging_azim/pi)
 title(txt);
 
 if(print_logs)
+    txt = strcat("ImpingingAz",num2str(180*impinging_azim/pi),"Elev",num2str(180*impinging_elev/pi),"ReflAz",num2str(180*relected_azim/pi),"Elev",num2str(180*relected_elev/pi));
+    mkdir(txt);
+    cd (txt) ;
     writematrix(Psi_optimum,"Psi_opt.txt");
     writematrix(Psi_suboptimum_1bit,"Psi_1bit.txt");
     writematrix(Psi_suboptimum_2bit,"Psi_2bit.txt");
     writematrix(h_AP2RIS,"h_ap2ris.txt");
     writematrix(h_RIS2UE,"h_ris2ue.txt");
+    cd ..\ ;
 end
 
 
