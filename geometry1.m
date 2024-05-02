@@ -7,7 +7,7 @@ fc = ((5.150 +5.875)/2)*1e9 ;
 lambda = physconst('LightSpeed')/fc; 
 global gradations; %#ok<*GVMIS>
 gradations = 600;
-
+print_logs = 1;
 width_RIS = nH*lambda/2;
 length_RIS = nV*lambda/2;
 y = linspace(-width_RIS/2,width_RIS/2,nH);
@@ -62,8 +62,7 @@ hold on;
 text(x_source,y_source,z_source+height_of_ap,'AP');hold on;
 
 stem3(x_source,y_source,height_of_ap,"filled",'LineWidth',2,'Color','g');
-txt = strcat("Impinging(AP2RIS): Azimuth(deg) = ",num2str(180*impinging_azim/pi),", Elev(deg) = ",num2str(180*impinging_elev/pi));
-title(txt);
+
 
 %% Generating Channels
 h_AP2RIS = getchannel(impinging_azim,impinging_elev,nH,nV);
@@ -72,10 +71,46 @@ h_RIS2UE = getchannel(impinging_azim,impinging_elev,nH,nV);
 % Compute optimim Array response of RIS
 Psi_optimum = -angle(h_AP2RIS.*h_RIS2UE);
 Psi_suboptimum_1bit = (pi/2) *sign(Psi_optimum);
-BF = BF_pattern(nH,Psi_suboptimum_1bit,h_AP2RIS);
-plot_BF_pattern(BF,height_of_RIS);
+
+Psi_suboptimum_2bit = floor(2*(1+Psi_optimum/pi));
+Psi_suboptimum_2bit(Psi_suboptimum_2bit == 0) = -3*pi/4;
+Psi_suboptimum_2bit(Psi_suboptimum_2bit == 1) = -pi/4;
+Psi_suboptimum_2bit(Psi_suboptimum_2bit == 2) = pi/4;
+Psi_suboptimum_2bit(Psi_suboptimum_2bit == 3) = 3*pi/4;
+
+choice = 3;% 1: 1-bit, 2: 2-bit , 3: optimum
+
+switch(choice)
+    case 1
+        BF = BF_pattern(nH,Psi_suboptimum_1bit,h_AP2RIS);
+        plot_BF_pattern(BF,height_of_RIS);
+        res = " | 1- bit res";
+    case 2
+        BF = BF_pattern(nH,Psi_suboptimum_2bit,h_AP2RIS);
+        plot_BF_pattern(BF,height_of_RIS);
+        res = " | 2- bit res";
+    case 3
+        BF = BF_pattern(nH,Psi_optimum,h_AP2RIS);
+        plot_BF_pattern(BF,height_of_RIS);
+        res = " | Optimum";
+    otherwise
+        disp("Wrong choice");
+end
+
+txt = strcat("Impinging(AP2RIS): Azimuth(deg) = ",num2str(180*impinging_azim/pi),", Elev(deg) = ",num2str(180*impinging_elev/pi),res);
+title(txt);
+
+if(print_logs)
+    writematrix(Psi_optimum,"Psi_opt.txt");
+    writematrix(Psi_suboptimum_1bit,"Psi_1bit.txt");
+    writematrix(Psi_suboptimum_2bit,"Psi_2bit.txt");
+    writematrix(h_AP2RIS,"h_ap2ris.txt");
+    writematrix(h_RIS2UE,"h_ris2ue.txt");
+end
 
 
+
+%% LOCAL FUNCTIONS
 function [x,y,z] = getline(impinging_azim,impinging_elev)
 
     PhiTheta = azel2phitheta([impinging_azim;impinging_elev]);
@@ -110,7 +145,7 @@ function BF = BF_pattern(nH,Psi,h_AP2RIS)
 
             arrayResponseVector1 = exp(-1i*pi*(0:(nH-1))*sin(azimGrid(i,j))*cos(elevGrid(i,j))).';
             arrayResponseVector2 = exp(-1i*pi*(0:(nH-1))*sin(elevGrid(i,j))).';
-            arrayResponseVector = kron(arrayResponseVector1,arrayResponseVector2);
+            arrayResponseVector = kron(arrayResponseVector2,arrayResponseVector1);
             BF(i,j) = abs(sum(arrayResponseVector.* h_subopt ));
         end
         disp([num2str(i) ' out of ' num2str(length(angleGrid)) ]);
@@ -123,16 +158,14 @@ function plot_BF_pattern(BF,h)
     global gradations;
     angleGrid= linspace(-pi/2,pi/2,gradations);
     [az,el] = meshgrid(angleGrid, angleGrid);
-    norm_BF = BF.'/max(max(BF));
-    magnification = 10;
-    [X, Y, Z]   = sph2cart(-el, -az, magnification*norm_BF);
+    norm_BF = BF/max(max(BF));
+    magnification_factor = 10;
+    [X, Y, Z]   = sph2cart(el+pi/2, az, magnification_factor*norm_BF);
     colormap turbo
     surfHdl = surf(X,Y,Z+h, norm_BF,'EdgeColor','none');
 
     view([125 20])
-    set(surfHdl,'LineStyle','none','FaceAlpha',0.5,'Tag','3D polar plot','CData',BF.'/max(max(BF)) ,'CDataMode','manual');
+    set(surfHdl,'LineStyle','none','FaceAlpha',0.5,'Tag','3D polar plot');
     
-
-
 end
 
