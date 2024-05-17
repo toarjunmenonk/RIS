@@ -221,7 +221,7 @@ function plot_BF_pattern(BF,h)
     BFsurface = surf(X,Y,Z+h, norm_BF);
 
     view([75 20])
-    % set(BFsurface,'LineStyle','none','FaceAlpha',0.5,'Tag','3D polar plot');
+    set(BFsurface,'LineStyle','none','FaceAlpha',0.5,'Tag','3D polar plot');
     
 end
 
