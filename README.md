@@ -1,5 +1,5 @@
 # MATLAB System Model for 16x16 1-bit / 2-bit phase resolution RIS 
-
+Generic Formula for  creating a mainlobe at (theta_r, phi_r) direction, when AP is located at (theta_i, phi_i)
 ![formula_generic](https://github.com/toarjunmenonk/RIS/assets/54214979/eef6ba87-28ca-472a-81ae-0f358b9f35b8)
 ![equation](https://github.com/toarjunmenonk/RIS/assets/54214979/e179cc53-c897-41a8-bde9-ec760d26fbc9)
 ![1](https://github.com/toarjunmenonk/RIS/assets/54214979/76026589-6494-4d17-8d07-2f5e788320ea)
