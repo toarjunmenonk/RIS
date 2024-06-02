@@ -1,0 +1,177 @@
+% Implementation of Paper  Titled - "RIS-Aided Wireless Communications: Prototyping, Adaptive Beamforming, and Indoor/Outdoor Field Trials" -  Author : Xilong Pei
+% 
+% We are implementing a greedy algorithm to decide the optimum  Array Phase Response of IRS, with the following assumptions - 
+% 1) Phase shifts of the IRS can take binary values of either +pi/2 or -pi/2. 
+% 2) Only 1 Tx and 1 Rx antennas are there. 
+% 3) Coherence time = infinity
+
+close all; clearvars; clc;
+
+% No: of Rows(M), columns(N) and No: of reflectors(nRefl)
+
+M = 16; 
+N = 16; 
+nRefl = M*N;
+
+% Generate a Pseudo Random Sequence of -1 and +1 to make the initial phase
+% distribution random. Seed has been used for repeatability
+
+rng(0);
+prbs =( 1-2*randi([0,1],1,nRefl)).';
+
+% Define fading coeffs for AP-RIS and RIS-UE channels. We assume
+% independent channel.
+
+H_ap2ris = sqrt(A*mu1) * Rsqrtm * (randn(N,realizations) + 1i*randn(N,realizations))/sqrt(2);
+H_ris2ue = sqrt(A*mu2) * Rsqrtm * (randn(N,realizations) + 1i*randn(N,realizations))/sqrt(2);
+
+
+% H_ap2ris = (1/sqrt(2))*(randn(nRefl,1) +1i*randn(nRefl,1)); 
+% H_ris2ue = (1/sqrt(2))*(randn(nRefl,1) +1i*randn(nRefl,1)); 
+
+% Define Array phase response
+
+apr = 1i*ones(nRefl,1); % RIS Reflector Array Phase Response. Set initial values.
+apr = apr.*prbs;
+
+
+
+
+
+nbits = 1e3;
+sym = 2*randi([0,1],1,nbits) -1;
+chan_out = zeros(size(sym));
+
+H = (1/nRefl)*H_ap2ris .* apr .*H_ris2ue ; % Total channel response
+for i = 1: length(sym)
+    chan_out(i) = sum(sym(i)*H);
+end
+rsrp_prev = mean(abs(chan_out).^2); % This value has to be maximised using Greedy Algorithm
+rsrp_max = rsrp_prev;
+rsrp_logs =[]; % For plotting purpose we are keeping logs
+for j = 1: M % row wise raster
+
+    apr_new = update_apr(apr,j,'rowwise',M,N);
+    H = (1/nRefl)*H_ap2ris .* apr_new .*H_ris2ue ; % Total channel response
+    for i = 1: length(sym)
+        chan_out(i) = sum(sym(i)*H);
+    end
+    rsrp_curr = mean(abs(chan_out).^2); % This value has to be maximised using Greedy Algorithm
+    
+    if(rsrp_curr > rsrp_max)
+        apr = apr_new;
+        rsrp_max = rsrp_curr;
+    end
+    rsrp_logs = [rsrp_logs;rsrp_max];
+    plotapr(apr,M,N,'rowwise',j,rsrp_logs,H_ap2ris,H_ris2ue); 
+end
+
+rsrp_prev = rsrp_max;
+for j = 1: N % col wise raster
+
+    apr_new = update_apr(apr,j,'colwise',M,N );
+    H = (1/nRefl)*H_ap2ris .* apr_new .*H_ris2ue ; % Total channel response
+    for i = 1: length(sym)
+        chan_out(i) = sum(sym(i)*H);
+    end
+    rsrp_curr = mean(abs(chan_out).^2); % This value has to be maximised using Greedy Algorithm
+    
+    if(rsrp_curr > rsrp_max)
+        apr = apr_new;
+        rsrp_max = rsrp_curr;
+    end
+    rsrp_logs = [rsrp_logs;rsrp_max];
+    plotapr(apr,M,N,'rowwise',j,rsrp_logs,H_ap2ris,H_ris2ue);
+end
+
+function [apr_new] = update_apr(apr,j,str,M,N)
+
+    apr_new = reshape(apr,[M,N]);
+    if(strcmp(str,'rowwise'))
+        apr_new(:,j) = -apr_new(:,j);
+    end
+
+    if(strcmp(str,'colwise'))
+        apr_new(j,:) = -apr_new(j,:);
+    end
+    apr_new = apr_new(:);
+
+end
+
+function plotapr(apr,M,N,rowcol,j,rsrp,H_ap2ris,H_ris2ue)
+
+    clf;
+    psi = (pi/2)*sign(imag(reshape(apr,[M,N])));
+
+    subplot(2,2,1);
+    heatmap(psi,'XLabel','Cols','YLabel','Rows');title("Array Phase Response Profile");
+
+    subplot(2,2,2); plot(rsrp,'-o','LineWidth',3); title("RSRP");xlim([0,M+N]); ylim([0,0.5]);
+    str = strcat("M = " ,num2str(M), ", N = ",num2str(N)," , " ,rowcol," iter = " ,num2str(j),",RSRP =",num2str(rsrp(end)));
+    legend(str);grid on;hold on;
+
+    subplot(2,2,3);
+    angleGrid = linspace(-pi/2,pi/2,30);
+    [azimGrid,elevGrid] = meshgrid(angleGrid, angleGrid);
+    BF = plotBF(psi,M,N,H_ap2ris,H_ris2ue);
+    box on; grid on;set(groot,'defaultAxesTickLabelInterpreter','latex');
+    surf(azimGrid/pi, elevGrid/pi, BF/max(max(BF)));
+
+    ax = gca;
+    set(ax, 'XTick', [-0.5, -1/3, -1/4, 0, 1/4, 1/3, 1/2]);
+    xticklabels({'$-\frac{\pi}{2}$','$-\frac{\pi}{3}$','$-\frac{\pi}{4}$','$0$', '$\frac{\pi}{4}$','$\frac{\pi}{3}$','$\frac{\pi}{2}$'});
+    set(ax, 'YTick', [-0.5, -1/3, -1/4, 0,1/4, 1/3, 1/2]);
+    yticklabels({'$-\frac{\pi}{2}$','$-\frac{\pi}{3}$', '$-\frac{\pi}{4}$','$0$', '$\frac{\pi}{4}$','$\frac{\pi}{3}$','$\frac{\pi}{2}$'});
+    xlabel('Azimuth angle ($\varphi$)','Interpreter','latex');
+    ylabel('Elevation angle ($\theta$)','Interpreter','latex');
+    set(gca,'fontsize',14);
+    axis square;
+    shading interp;
+    view(0,90)
+    hBar = colorbar;
+    clim([0, 1]);
+    set(hBar, 'TickLabelInterpreter', 'latex');
+    set(gcf, 'Renderer', 'Painters');
+
+    pause(.1);
+
+end
+
+function  BF = plotBF(Psi,Mh,Mv,H_ap2ris,H_ris2ue)
+
+    % We assume the Azimuth, Elevation angle of the source in radians as
+
+    azim = pi/4; elev = -pi/4; 
+    
+    % Array response matrix, assuming distance btwn elemnts,Delta = lamda/2
+    
+    arrayResponseVector1 = exp(-1i*pi*(0:(Mh-1))*sin(azim)*cos(elev)).';
+    arrayResponseVector2 = exp(-1i*pi*(0:(Mv-1))*sin(elev)).';
+    
+    A = kron(arrayResponseVector1,arrayResponseVector2);
+
+    % Apply Phase Shift that the RIS provides.
+
+    A = A.*exp(1i*Psi(:)); 
+    
+    % Received signals
+
+    Y = H_ap2ris.*A.*H_ris2ue;
+    Y2 = Y*Y';
+    
+    angleGrid = linspace(-pi/2,pi/2,30);
+    [azimGrid,elevGrid] = meshgrid(angleGrid, angleGrid);
+    
+    
+    BF = zeros(size(azimGrid));
+    
+    for i = 1:length(angleGrid)
+        for j = 1:length(angleGrid)
+            arrayResponseVector1 = exp(-1i*pi*(0:(Mh-1))*sin(azimGrid(i,j))*cos(elevGrid(i,j))).';
+            arrayResponseVector2 = exp(-1i*pi*(0:(Mv-1))*sin(elevGrid(i,j))).';
+            arrayResponseVector = kron(arrayResponseVector1,arrayResponseVector2);
+    
+            BF(i,j) = 1/real((arrayResponseVector'/Y2)*arrayResponseVector);
+        end
+    end
+end
