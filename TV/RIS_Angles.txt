@@ -1,0 +1,21 @@
+UE elev = 0
+AP elev = 0
+AP azimuth = 0
+UE Azimuth = 0 deg
+[ 0 0 0 0 0 0 0 0  0 0 0 0 0 0 0 0]
+or 
+[ pi pi pi pi pi pi pi pi pi pi pi pi pi pi pi pi]
+
+
+
+UE Azimuth = 15 or -15 deg
+[ 0 0 pi pi pi pi 0 0  0 0 pi pi pi pi 0 0]
+
+UE Azimuth = 30 or -30 deg
+[ 0 0 pi pi 0 0 pi pi  0 0 pi pi 0 0 pi pi]
+
+UE Azimuth = 45 or -45 deg
+[ 0 pi pi 0 pi 0 0 pi  0 0 pi 0 0 pi 0 pi]
+
+UE Azimuth = 60 or -60 deg
+[ 0 pi 0 pi pi 0 pi 0 pi  0 pi 0 0 pi 0 pi]
